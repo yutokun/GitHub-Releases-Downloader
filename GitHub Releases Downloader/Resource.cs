@@ -11,7 +11,7 @@ namespace GitHubReleasesDownloader
 {
     public static class Resource
     {
-        public static string TempDirectory => Path.Combine(Directory.GetParent(Path.GetTempFileName()).FullName, "GitHubReleasesDownloader");
+        static string TempDirectory => Path.Combine(Directory.GetParent(Path.GetTempFileName()).FullName, "GitHubReleasesDownloader");
 
         public static async Task<string> Extract(string path, Action onPathLocked = null)
         {

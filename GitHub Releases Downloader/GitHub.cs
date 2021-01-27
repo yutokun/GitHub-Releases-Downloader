@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+﻿using System;
+using System.Diagnostics;
 using System.Threading.Tasks;
 
 namespace GitHubReleasesDownloader
@@ -12,14 +13,9 @@ namespace GitHubReleasesDownloader
     {
         static string pathToGh;
 
-        static async Task EnsureGHExist()
+        public async void Login()
         {
-            pathToGh = await Resource.Extract("gh.exe");
-        }
-
-        public void Login()
-        {
-            var response = Run("auth login --web");
+            var response = await Run("auth login --web");
             // TODO ワンタイムコードを切り出して、ブラウザに飛ばす。
             // TODO 標準出力を監視して、Authentication Complete を検知したら表示を変えたり。
         }
@@ -29,9 +25,9 @@ namespace GitHubReleasesDownloader
         /// </summary>
         /// <param name="repo"></param>
         /// <returns></returns>
-        public Release GetLatestRelease(string repo)
+        public async Task<Release> GetLatestRelease(string repo)
         {
-            var tag = Run($"release view --repo {repo}"); // TODO 1行目を取得
+            var tag = await Run($"release view --repo {repo}"); // TODO 1行目を取得
             return new Release { Tag = tag };
         }
 
@@ -40,13 +36,14 @@ namespace GitHubReleasesDownloader
         /// </summary>
         /// <param name="repo">owner/repo</param>
         /// <param name="pattern">*.exe</param>
-        public void DownloadLatest(string repo, string pattern)
+        public async void DownloadLatest(string repo, string pattern)
         {
-            Run($"release download --pattern \"{pattern}\" --repo {repo}");
+            var response = await Run($"release download --pattern \"{pattern}\" --repo {repo}");
         }
 
-        string Run(string arguments)
+        static async Task<string> Run(string arguments, Action<string, Process> action = null)
         {
+            await EnsureGHExist();
             var startInfo = new ProcessStartInfo
             {
                 FileName = pathToGh,
@@ -58,7 +55,6 @@ namespace GitHubReleasesDownloader
             };
 
             var output = "";
-            await EnsureDaemonRunning();
 
             using (var process = new Process())
             {
@@ -72,6 +68,21 @@ namespace GitHubReleasesDownloader
                 process.WaitForExit();
                 return output;
             }
+        }
+
+        static async Task EnsureGHExist()
+        {
+            pathToGh = await Resource.Extract("gh.exe");
+        }
+
+        static void OnDataReceived(string message, Process process, ref string output, Action<string, Process> onReceived)
+        {
+            if (string.IsNullOrEmpty(message)) return;
+            if (string.IsNullOrWhiteSpace(message)) return;
+            if (message.StartsWith("*")) return;
+            output += $"{message}\n";
+
+            onReceived?.Invoke(message, process);
         }
     }
 }
