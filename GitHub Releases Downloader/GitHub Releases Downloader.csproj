@@ -84,6 +84,7 @@
     </ItemGroup>
     <ItemGroup>
       <Content Include="Command Samples.md" />
+      <Content Include="gh.exe" />
     </ItemGroup>
     <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
